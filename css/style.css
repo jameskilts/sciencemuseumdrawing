@@ -1,0 +1,255 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    background-color: #121212;
+    color: white;
+}
+
+#app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+#camera-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 320px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+#webcam {
+    width: 100%;
+    display: block;
+}
+
+#hint {
+    padding: 10px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.7);
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#file-upload-container {
+    padding: 10px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.file-upload-label {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #4a90e2;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.file-upload-label:hover {
+    background: #357abd;
+}
+
+.file-upload-label:active {
+    transform: scale(0.98);
+}
+
+.file-upload-label span {
+    pointer-events: none;
+}
+
+#game-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#capture-canvas {
+    display: none;
+}
+
+/* Screens */
+.screen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.screen.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* Theme Selection Screen */
+#theme-selection {
+    display: none; /* Will be shown via JavaScript */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #2c3e50, #3498db);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    transition: opacity 0.3s ease;
+}
+
+#theme-selection h1 {
+    font-size: 3em;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#theme-selection h2 {
+    font-size: 1.8em;
+    margin-bottom: 40px;
+    font-weight: 300;
+}
+
+.theme-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.theme-option {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.theme-option:hover {
+    transform: translateY(-10px);
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.theme-preview {
+    width: 100%;
+    height: 150px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.space-theme { background: linear-gradient(45deg, #0f2027, #203a43, #2c5364); }
+.fishtank-theme { background: linear-gradient(45deg, #1e90ff, #00bfff, #87ceeb); }
+.rocket-theme { background: linear-gradient(45deg, #1a2980, #26d0ce); }
+.petri-theme { background: linear-gradient(45deg, #f5f7fa, #c3cfe2); }
+.dinosaur-theme { background: linear-gradient(45deg, #8B4513, #A0522D, #D2691E); }
+.solar-theme { background: linear-gradient(45deg, #0F2027, #203A43, #2C5364); }
+.body-theme { background: linear-gradient(45deg, #FFC0CB, #FF69B4, #FF1493); }
+.butterfly-theme { background: linear-gradient(45deg, #FFD700, #FFA500, #FF8C00); }
+.gears-theme { background: linear-gradient(45deg, #708090, #778899, #B0C4DE); }
+
+.theme-option span {
+    font-size: 1.2em;
+    font-weight: 500;
+}
+
+/* Back Button */
+#back-button {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+    z-index: 1001;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    padding: 0;
+}
+
+#back-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+#back-button:active {
+    transform: scale(0.95);
+}
+
+.theme-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.theme-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.theme-btn.active {
+    background: rgba(255, 255, 255, 0.4);
+    font-weight: bold;
+}
+
+/* Theme Styles */
+.theme-space {
+    background: linear-gradient(to bottom, #000428, #004e92);
+}
+
+.theme-fishtank {
+    background: linear-gradient(to bottom, #1e90ff, #00bfff);
+}
+
+.theme-rocket {
+    background: linear-gradient(to bottom, #1a2980, #26d0ce);
+}
+
+.theme-petri {
+    background: linear-gradient(to bottom, #f5f7fa, #c3cfe2);
+}
