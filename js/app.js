@@ -324,8 +324,6 @@ class ScienceMuseumDrawing {
             this.isCapturing = false;
         }
     }
-    
-
 
     initTheme() {
         // Clear previous theme elements
@@ -443,7 +441,54 @@ class ScienceMuseumDrawing {
             this.app.stage.addChild(star);
             this.themeElements.push(star);
         }
+
+        // Add photorealistic Earth arc at the bottom
+        const earthRadius = Math.max(this.app.screen.width, this.app.screen.height);
+        const earthCenterX = this.app.screen.width / 2;
+        const earthCenterY = this.app.screen.height + earthRadius * 0.9;
         
+        // Create a canvas for the radial gradient
+        const gradCanvas = document.createElement('canvas');
+        gradCanvas.width = gradCanvas.height = Math.ceil(earthRadius * 2);
+        const gradCtx = gradCanvas.getContext('2d');
+        const grad = gradCtx.createRadialGradient(
+            gradCanvas.width / 2, gradCanvas.height / 2, earthRadius * 0.2, // inner
+            gradCanvas.width / 2, gradCanvas.height / 2, earthRadius * 0.98  // outer
+        );
+        // grad.addColorStop(0, '#001f4d');
+        // grad.addColorStop(0.25, '#1565c0');
+        // grad.addColorStop(0.45, '#3399ff');
+        grad.addColorStop(0.75, '#001f4d');
+        grad.addColorStop(1, '#6699ff');
+        gradCtx.arc(gradCanvas.width / 2, gradCanvas.height / 2, earthRadius, 0, Math.PI, true);
+        gradCtx.fillStyle = grad;
+        gradCtx.fill();
+        
+        // Create PIXI texture from the gradient canvas
+        const earthTexture = PIXI.Texture.from(gradCanvas);
+        const earthSprite = new PIXI.Sprite(earthTexture);
+        earthSprite.anchor.set(0.5, 0.5);
+        earthSprite.x = earthCenterX;
+        earthSprite.y = earthCenterY * 1.02;
+        earthSprite.width = earthRadius * 2;
+        earthSprite.height = earthRadius * 2;
+        earthSprite.alpha = 1;
+        
+        // Add dark blue glow using a blurred circle
+        const glow = new PIXI.Graphics();
+        const glowRadius = earthRadius * 1.01;
+        glow.beginFill(0x001f9d, 0.7);
+        glow.drawCircle(earthCenterX, earthCenterY, glowRadius);
+        glow.endFill();
+        glow.filters = [new PIXI.filters.BlurFilter(32, 4)];
+        glow.alpha = 0.8;
+        this.app.stage.addChild(glow);
+        this.themeElements.push(glow);
+        
+        // Add the Earth arc
+        this.app.stage.addChild(earthSprite);
+        this.themeElements.push(earthSprite);
+
         // Initialize starman starting the animation after a delay
         this.initStarman();
         const initialDelay = 5000 + Math.random() * 10000; // 5-15 seconds
@@ -863,18 +908,18 @@ class ScienceMuseumDrawing {
             debugInfo.error = error.message;
             
             // Create error canvas
-            const errorCanvas = document.createElement('canvas');
-            errorCanvas.width = imageData.width;
-            errorCanvas.height = imageData.height;
-            const errorCtx = errorCanvas.getContext('2d');
-            errorCtx.putImageData(imageData, 0, 0);
+            // const errorCanvas = document.createElement('canvas');
+            // errorCanvas.width = imageData.width;
+            // errorCanvas.height = imageData.height;
+            // const errorCtx = errorCanvas.getContext('2d');
+            // errorCtx.putImageData(imageData, 0, 0);
             
             // Draw error message
-            errorCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            errorCtx.fillRect(0, 0, errorCanvas.width, 40);
-            errorCtx.fillStyle = '#ff0000';
-            errorCtx.font = '16px Arial';
-            errorCtx.fillText('Error processing image. Please try again.', 10, 25);
+            // errorCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            // errorCtx.fillRect(0, 0, errorCanvas.width, 40);
+            // errorCtx.fillStyle = '#ff0000';
+            // errorCtx.font = '16px Arial';
+            // errorCtx.fillText('Error processing image. Please try again.', 10, 25);
             
             return {
                 imageData: errorCtx.getImageData(0, 0, errorCanvas.width, errorCanvas.height),
@@ -1237,67 +1282,94 @@ class ScienceMuseumDrawing {
 
         switch(this.currentTheme) {
             case 'space': {
-                // Store original position for floating animation
-                const spaceStartY = container.y;
-                const spaceAmplitude = 20;
-                const spaceSpeed = 0.005;
-                const spaceStartTime = Date.now();
-                
-                // Create tether cord
+                // Animate astronaut from center outward, scaling up, then return after 30s
+                const stationX = this.app.screen.width / 2;
+                const stationY = this.app.screen.height / 2;
+                const maxDistance = Math.min(this.app.screen.width, this.app.screen.height) * 0.35;
+                const minScale = 0.2;
+                const maxScale = 0.5;
+                const outwardDuration = 30000; // 30 seconds outward
+                const inwardDuration = 9000;   // 2 seconds back to center
+                let startTime = Date.now();
+                let animatingOutward = true;
+                let progress = 0;
+
+                // Set initial position/scale
+                container.position.set(stationX, stationY);
+                container.scale.set(minScale);
+
+                // Create tether cord (drawn behind astronaut)
                 const tether = new PIXI.Graphics();
                 this.app.stage.addChild(tether);
                 this.themeElements.push(tether);
-                
-                // Store tether with container for cleanup
                 container.tether = tether;
-                
-                this.app.ticker.add(() => {
-                    const time = (Date.now() - spaceStartTime) * spaceSpeed;
-                    
-                    // Update container position with floating animation
-                    container.y = spaceStartY + Math.sin(time) * spaceAmplitude;
-                    container.rotation = Math.sin(time * 0.5) * 0.1;
-                    
-                    // Update tether cord
+
+                // Choose a random angle for this astronaut's path
+                const angle = Math.random() * Math.PI * 2;
+                // Pick a random offset for floating
+                const floatAmplitude = 20 + Math.random() * 15;
+                const floatSpeed = 0.002 + Math.random() * 0.002;
+
+                // Animation ticker
+                const animate = () => {
+                    const now = Date.now();
+                    let elapsed = now - startTime;
+                    if (animatingOutward) {
+                        progress = Math.min(1, elapsed / outwardDuration);
+                    } else {
+                        progress = 1 - Math.min(1, elapsed / inwardDuration);
+                    }
+                    // Position along the path
+                    const distance = maxDistance * progress;
+                    const x = stationX + Math.cos(angle) * distance;
+                    const y = stationY + Math.sin(angle) * distance + Math.sin(now * floatSpeed) * floatAmplitude;
+                    container.position.set(x, y);
+                    // Scale
+                    const scale = minScale + (maxScale - minScale) * progress;
+                    container.scale.set(scale);
+                    // Rotation (gentle float)
+                    container.rotation = Math.sin(now * floatSpeed * 0.7) * 0.1;
+
+                    // Draw tether
                     tether.clear();
-                    const stationX = this.app.screen.width / 2;
-                    const stationY = this.app.screen.height / 2;
-                    const astronautX = container.x;
-                    const astronautY = container.y;
-                    
-                    const midX = (stationX + astronautX) / 2;
-                    const midY = (stationY + astronautY) / 2;
-                    const offset = 100;
-                    
-                    // Draw tether cord with S-curve using bezier curves
                     tether.lineStyle(3, 0xFFFFFF, 0.7);
                     tether.moveTo(stationX, stationY);
-                    
+                    // Control points for a nice curve
+                    const midX = (stationX + x) / 2;
+                    const midY = (stationY + y) / 2;
                     const cp1x = stationX + (midX - stationX) / 2;
-                    const cp1y = stationY + offset;
-                    const cp2x = midX + (astronautX - midX) / 2;
-                    const cp2y = midY - offset;
-                    
-                    tether.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, astronautX, astronautY);
-                    
-                    // Add small dots along the tether for detail
+                    const cp1y = stationY + 100;
+                    const cp2x = midX + (x - midX) / 2;
+                    const cp2y = midY - 100;
+                    tether.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
+                    // Dots along tether
                     const segments = 10;
                     for (let i = 1; i < segments; i++) {
                         const t = i / segments;
-                        const x = Math.pow(1-t, 3) * stationX + 3 * Math.pow(1-t, 2) * t * cp1x + 3 * (1-t) * t * t * cp2x + t * t * t * astronautX;
-                        const y = Math.pow(1-t, 3) * stationY + 3 * Math.pow(1-t, 2) * t * cp1y + 3 * (1-t) * t * t * cp2y + t * t * t * astronautY;
-                        
-                        tether.beginFill(0xFFFFFF, 0.8).drawCircle(x, y, 1.5).endFill();
+                        const dotX = Math.pow(1-t, 3) * stationX + 3 * Math.pow(1-t, 2) * t * cp1x + 3 * (1-t) * t * t * cp2x + t * t * t * x;
+                        const dotY = Math.pow(1-t, 3) * stationY + 3 * Math.pow(1-t, 2) * t * cp1y + 3 * (1-t) * t * t * cp2y + t * t * t * y;
+                        tether.beginFill(0xFFFFFF, 0.8).drawCircle(dotX, dotY, 1.5).endFill();
                     }
-                });
-                
+
+                    // Animation phase switching
+                    if (animatingOutward && elapsed >= outwardDuration) {
+                        animatingOutward = false;
+                        startTime = now;
+                    } else if (!animatingOutward && elapsed >= inwardDuration) {
+                        // Reset for next loop
+                        animatingOutward = true;
+                        startTime = now;
+                    }
+                };
+                this.app.ticker.add(animate);
+
                 container.on('removed', () => {
                     if (container.tether) {
                         this.app.stage.removeChild(container.tether);
                         container.tether.destroy();
                     }
+                    this.app.ticker.remove(animate);
                 });
-                
                 break;
             }
                 
